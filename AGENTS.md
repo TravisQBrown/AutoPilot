@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Pilot data lives in a client-side store (src/lib/pilots.ts, localStorage) with health/stall rules as pure functions — keeps the app working without a backend until Cloud is added.
