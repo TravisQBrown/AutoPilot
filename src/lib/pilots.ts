@@ -46,7 +46,7 @@ export interface Pilot {
   durationDays: number;
   dayNumber: number;
   hypothesis: string;
-  problem?: string; // the one problem this pilot solves
+  problem?: string | undefined; // the one problem this pilot solves
   nudges?: Nudge[];
   criteria: Criterion[];
   stakeholders: Stakeholder[];
@@ -55,7 +55,7 @@ export interface Pilot {
   nextStep: string;
   feedback: Feedback[];
   completed?: boolean;
-  draft?: boolean; // saved but not launched; launch requires a problem
+  draft?: boolean | undefined; // saved but not launched; launch requires a problem
 }
 
 export const USER_STEPS = [
