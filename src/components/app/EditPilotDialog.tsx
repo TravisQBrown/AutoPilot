@@ -13,8 +13,8 @@ export function EditPilotDialog({ pilot }: { pilot: Pilot }) {
   const set = (k: keyof ReturnType<typeof init>) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }));
 
   function save() {
-    if (!f.company.trim()) return toast.error("Business name is required");
-    if (!pilot.draft && !f.problem.trim()) return toast.error("A launched pilot needs a problem defined");
+    if (!f.company.trim()) { toast.error("Business name is required"); return; };
+    if (!pilot.draft && !f.problem.trim()) { toast.error("A launched pilot needs a problem defined"); return; };
     store.update(pilot.id, (p) => ({
       ...p,
       company: f.company.trim(),
