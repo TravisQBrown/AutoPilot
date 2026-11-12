@@ -319,3 +319,30 @@ export function needsDefinition(p: Pilot) {
 export function canLaunch(p: Pilot) {
   return !needsDefinition(p);
 }
+
+// ---------- activity (simulated, derived from stakeholder progress) ----------
+export const ACTIVITY_GROUPS = [
+  "Completed Starter Brain onboarding",
+  "Asked first company-specific question",
+  "Added knowledge",
+  "Completed a pilot milestone",
+  "Reported a blocker",
+] as const;
+export type ActivityGroup = (typeof ACTIVITY_GROUPS)[number];
+export interface ActivityItem { group: ActivityGroup; pilot: Pilot; who: string; hoursAgo: number | null }
+
+export function activityItems(p: Pilot): ActivityItem[] {
+  const out: ActivityItem[] = [];
+  for (const s of p.stakeholders) {
+    const h = s.lastActiveHoursAgo;
+    if (s.role === "champion") {
+      if (h !== null) out.push({ group: "Added knowledge", pilot: p, who: s.name, hoursAgo: h });
+      continue;
+    }
+    if (s.stepsDone >= 1) out.push({ group: "Completed Starter Brain onboarding", pilot: p, who: s.name, hoursAgo: h });
+    if (s.stepsDone >= 2) out.push({ group: "Asked first company-specific question", pilot: p, who: s.name, hoursAgo: h });
+    if (s.stepsDone >= 3) out.push({ group: "Completed a pilot milestone", pilot: p, who: s.name, hoursAgo: h });
+  }
+  for (const f of p.feedback) out.push({ group: "Reported a blocker", pilot: p, who: f.author, hoursAgo: f.hoursAgo });
+  return out;
+}

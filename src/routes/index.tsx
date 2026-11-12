@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Zap } from "lucide-react";
 import { AppHeader, Card, StatusPill, Bar, btn } from "@/components/app/ui";
-import { usePilots, pilotHealth, criteriaMet, relTime, stallBreakers, needsDefinition, type Health } from "@/lib/pilots";
+import { usePilots, pilotHealth, criteriaMet, relTime, stallBreakers, needsDefinition, activityItems, ACTIVITY_GROUPS, type Health } from "@/lib/pilots";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,9 +22,11 @@ function Dashboard() {
   const active = pilots.filter((p) => !p.completed && !p.draft);
   const plays = active.flatMap((p) => stallBreakers(p).map((pl) => ({ ...pl, pilot: p })));
 
-  const feed = active
-    .flatMap((p) => p.stakeholders.map((s) => ({ p, s })))
-    .sort((a, b) => (a.s.lastActiveHoursAgo ?? 9999) - (b.s.lastActiveHoursAgo ?? 9999));
+  const items = active.flatMap(activityItems);
+  const groups = ACTIVITY_GROUPS.map((g) => ({
+    g,
+    list: items.filter((i) => i.group === g).sort((x, y) => (x.hoursAgo ?? 9999) - (y.hoursAgo ?? 9999)),
+  })).filter((x) => x.list.length);
 
   return (
     <div className="min-h-screen">
@@ -102,13 +104,20 @@ function Dashboard() {
           <section>
             <h2 className="mb-3 text-sm font-semibold">Activity</h2>
             <Card className="divide-y divide-border">
-              {feed.slice(0, 9).map(({ p, s }) => (
-                <div key={p.id + s.id} className="px-4 py-3 text-sm">
-                  <span className="font-medium">{s.role === "champion" ? "Owner " : ""}{s.name}</span>
-                  <span className="text-muted-foreground"> · {p.company}</span>
-                  <div className={"text-xs " + (s.lastActiveHoursAgo === null || s.lastActiveHoursAgo > 72 ? "text-danger" : "text-muted-foreground")}>
-                    {s.lastActiveHoursAgo === null ? "Hasn't opened the app yet" : `Last active ${relTime(s.lastActiveHoursAgo)}`}
+              {groups.length === 0 && <div className="p-4 text-sm text-muted-foreground">No activity yet.</div>}
+              {groups.map(({ g, list }) => (
+                <div key={g} className="px-4 py-3">
+                  <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                    <span>{g}</span><span className="font-mono tabular-nums">{list.length}</span>
                   </div>
+                  <ul className="mt-1.5 space-y-1">
+                    {list.slice(0, 3).map((i, k) => (
+                      <li key={k} className="flex justify-between gap-2 text-sm">
+                        <span className="truncate"><span className="font-medium">{i.who}</span><span className="text-muted-foreground"> · {i.pilot.company}</span></span>
+                        <span className="shrink-0 text-xs text-muted-foreground">{relTime(i.hoursAgo)}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </Card>
