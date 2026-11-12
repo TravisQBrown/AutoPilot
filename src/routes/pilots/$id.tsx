@@ -42,6 +42,9 @@ function PilotPage() {
             <p className="mt-1 text-sm text-muted-foreground">{pilot.industry} · {pilot.teamSize} people · Day {pilot.dayNumber} of {pilot.durationDays}</p>
           </div>
           <div className="flex gap-2">
+            {!pilot.draft && <button className={btn("secondary")} onClick={() => { const o = pilot.stakeholders.find((s) => s.role === "champion"); const c = pilot.criteria[0]; navigator.clipboard?.writeText(`Hi ${o?.name.split(" ")[0] ?? "there"}, our ${pilot.durationDays}-day pilot is live.${pilot.problem ? ` The goal: ${pilot.problem.replace(/\.$/, "")}.` : ""}${c ? ` We'll call it a win at ${c.target}${c.unit ? " " + c.unit : ""} — ${c.label.toLowerCase()}.` : ""} Your team's link: ${hubUrl} — I'll check in this week.`); toast.success("Kickoff message copied"); }}>
+              <Mail className="size-3.5" /> Copy kickoff message
+            </button>}
             <button className={btn("secondary")} onClick={() => { navigator.clipboard?.writeText(hubUrl); toast.success("Magic link copied"); }}>
               <Copy className="size-3.5" /> Copy magic link
             </button>
