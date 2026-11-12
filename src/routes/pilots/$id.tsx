@@ -1,8 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ExternalLink, Copy, FileText, Zap, Check } from "lucide-react";
+import { useState } from "react";
+import { ExternalLink, Copy, FileText, Zap, Check, Mail, X } from "lucide-react";
 import { toast } from "sonner";
-import { AppHeader, Card, StatusPill, RoleBadge, Bar, btn } from "@/components/app/ui";
-import { usePilots, pilotHealth, stallBreakers, criterionProgress, relTime, USER_STEPS } from "@/lib/pilots";
+import { AppHeader, Card, StatusPill, RoleBadge, Bar, btn, inputCls } from "@/components/app/ui";
+import { usePilots, pilotHealth, stallBreakers, criterionProgress, relTime, USER_STEPS, draftNudge, store, type Play, type Pilot } from "@/lib/pilots";
 
 export const Route = createFileRoute("/pilots/$id")({
   head: () => ({
@@ -22,6 +23,7 @@ function PilotPage() {
   if (!pilot) throw notFound();
   const h = pilotHealth(pilot);
   const plays = stallBreakers(pilot);
+  const [reviewing, setReviewing] = useState<Play | null>(null);
   const hubUrl = typeof window !== "undefined" ? `${window.location.origin}/hub/${pilot.token}` : `/hub/${pilot.token}`;
 
   return (
@@ -46,7 +48,8 @@ function PilotPage() {
           </div>
         </div>
 
-        <p className="mt-6 max-w-2xl text-sm"><span className="text-muted-foreground">Hypothesis — </span>{pilot.hypothesis}</p>
+        {pilot.problem && <p className="mt-6 max-w-2xl text-sm"><span className="text-muted-foreground">Problem we're solving — </span>{pilot.problem}</p>}
+        <p className="mt-2 max-w-2xl text-sm"><span className="text-muted-foreground">Hypothesis — </span>{pilot.hypothesis}</p>
 
         {plays.length > 0 && (
           <div className="mt-6 space-y-3">
@@ -56,7 +59,12 @@ function PilotPage() {
                   <div className="flex items-center gap-1.5 text-sm font-medium"><Zap className="size-4 text-warning" /> {pl.title}</div>
                   <p className="mt-0.5 text-sm text-muted-foreground">{pl.detail}</p>
                 </div>
-                <button className={btn() + " shrink-0"} onClick={() => toast.success(pl.to === "champion" ? "Escalation sent to owner" : "Quick-start checklist sent")}>{pl.action}</button>
+                {(() => {
+                  const sent = pilot.nudges?.find((n) => n.playId === pl.id);
+                  return sent
+                    ? <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"><Check className="size-3.5 text-success" /> Email sent {new Date(sent.sentAt).toLocaleDateString()}</span>
+                    : <button className={btn() + " shrink-0"} onClick={() => setReviewing(pl)}><Mail className="size-3.5" /> Review email</button>;
+                })()}
               </Card>
             ))}
           </div>
@@ -135,6 +143,40 @@ function PilotPage() {
           </aside>
         </div>
       </main>
+      {reviewing && <ReviewEmail pilot={pilot} play={reviewing} onClose={() => setReviewing(null)} />}
+    </div>
+  );
+}
+
+function ReviewEmail({ pilot, play, onClose }: { pilot: Pilot; play: Play; onClose: () => void }) {
+  const draft = draftNudge(pilot, play);
+  const [subject, setSubject] = useState(draft.subject);
+  const [body, setBody] = useState(draft.body);
+  const approve = () => {
+    store.update(pilot.id, (p) => ({ ...p, nudges: [...(p.nudges ?? []), { playId: play.id, to: draft.to, subject, body, sentAt: Date.now() }] }));
+    toast.success(`Email sent to ${draft.to}`);
+    onClose();
+  };
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/30 p-4" onClick={onClose}>
+      <Card className="w-full max-w-xl space-y-4 bg-card p-6" >
+        <div onClick={(e) => e.stopPropagation()} className="space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-base font-semibold">Review before sending</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">AutoPilot drafted this from: {play.title.toLowerCase()}. Edit anything, then approve.</p>
+            </div>
+            <button className={btn("ghost")} onClick={onClose} aria-label="Close"><X className="size-4" /></button>
+          </div>
+          <div className="text-xs"><span className="text-muted-foreground">To: </span>{draft.to}</div>
+          <input className={inputCls} value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="Subject" />
+          <textarea className={inputCls + " font-sans"} rows={12} value={body} onChange={(e) => setBody(e.target.value)} aria-label="Email body" />
+          <div className="flex justify-end gap-2">
+            <button className={btn("ghost")} onClick={onClose}>Dismiss</button>
+            <button className={btn()} onClick={approve} disabled={!subject.trim() || !body.trim()}><Check className="size-3.5" /> Approve & send</button>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

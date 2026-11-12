@@ -29,6 +29,14 @@ export interface Feedback {
   hoursAgo: number;
 }
 
+export interface Nudge {
+  playId: string;
+  to: string;
+  subject: string;
+  body: string;
+  sentAt: number;
+}
+
 export interface Pilot {
   id: string;
   token: string;
@@ -38,6 +46,8 @@ export interface Pilot {
   durationDays: number;
   dayNumber: number;
   hypothesis: string;
+  problem?: string; // the one problem this pilot solves
+  nudges?: Nudge[];
   criteria: Criterion[];
   stakeholders: Stakeholder[];
   startupCommits: string[];
@@ -68,6 +78,7 @@ const SAMPLE: Pilot[] = [
   {
     id: "p-bluebird",
     token: "bluebird-7k2m",
+    problem: "Reduce time dispatchers spend reshuffling crews after last-minute cancellations.",
     company: "Bluebird Movers",
     industry: "Moving & Relocation",
     teamSize: 25,
@@ -96,6 +107,7 @@ const SAMPLE: Pilot[] = [
   {
     id: "p-polar",
     token: "polar-3x9q",
+    problem: "Stop losing same-day service calls because coordinators can't see tech availability.",
     company: "Polar Peak HVAC",
     industry: "HVAC Services",
     teamSize: 18,
@@ -119,6 +131,7 @@ const SAMPLE: Pilot[] = [
   {
     id: "p-ironclad",
     token: "ironclad-5p1r",
+    problem: "Cut repetitive subcontractor schedule calls to the office.",
     company: "Ironclad Builders",
     industry: "Construction",
     teamSize: 40,
@@ -138,6 +151,7 @@ const SAMPLE: Pilot[] = [
   {
     id: "p-crest",
     token: "crest-8h4n",
+    problem: "Reduce time spent building weekly crew schedules.",
     company: "Crestline Cleaning Co.",
     industry: "Commercial Services",
     teamSize: 12,
@@ -274,4 +288,25 @@ export function usePilots() {
 }
 export function uid() {
   return Math.random().toString(36).slice(2, 9);
+}
+
+/** Draft a friendly follow-up email for a stall-breaker play. */
+export function draftNudge(p: Pilot, play: Play) {
+  const ch = champion(p);
+  const problem = p.problem ?? p.hypothesis;
+  if (play.to === "champion") {
+    const first = ch?.name.split(" ")[0] ?? "there";
+    return {
+      to: ch?.email ?? "",
+      subject: `Quick check-in on the ${p.company} pilot`,
+      body: `Hi ${first},\n\nWe're on Day ${p.dayNumber} of the pilot and haven't seen much activity from the team yet — totally understandable, things get busy.\n\nAs a reminder, we set out to: ${problem}\n\nWould it help if we paused the clock, or hopped on a 5-minute guided setup with your team this week? Happy to do whatever makes this easiest.\n\nThanks,\nThe AutoPilot team`,
+    };
+  }
+  const inactive = users(p).filter((u) => u.stepsDone === 0);
+  const names = inactive.map((u) => u.name.split(" ")[0]).join(" and ");
+  return {
+    to: inactive.map((u) => u.email).join(", "),
+    subject: `3 quick steps to get started with ${p.company}'s pilot`,
+    body: `Hi ${names || "team"},\n\nWe're helping ${p.company} ${problem.charAt(0).toLowerCase() + problem.slice(1)}\n\nGetting started takes about 10 minutes:\n${USER_STEPS.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\nIf anything is confusing, just reply here and we'll help right away.\n\nThanks,\nThe AutoPilot team`,
+  };
 }

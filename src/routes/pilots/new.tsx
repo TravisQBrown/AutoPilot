@@ -34,13 +34,14 @@ function Wizard() {
   const [champ, setChamp] = useState({ name: "", email: "", title: "Owner" });
   const [team, setTeam] = useState([{ name: "", email: "", title: "", useCase: "" }]);
   const [hypothesis, setHypothesis] = useState("");
+  const [problem, setProblem] = useState("");
   const [criteria, setCriteria] = useState<Omit<Criterion, "id" | "actual">[]>([PRESETS[0]!]);
   const [startup, setStartup] = useState(DEFAULT_STARTUP_COMMITS.join("\n"));
   const [partner, setPartner] = useState(DEFAULT_PARTNER_COMMITS.join("\n"));
   const [nextStep, setNextStep] = useState("Convert to $249/mo Founding Partner plan");
 
   const valid = [
-    company.trim() && industry.trim(),
+    company.trim() && industry.trim() && problem.trim(),
     champ.name.trim() && champ.email.includes("@") && team.some((t) => t.name.trim()),
     hypothesis.trim() && criteria.length >= 1 && criteria.every((c) => c.label.trim()),
     true,
@@ -55,7 +56,7 @@ function Wizard() {
     ];
     store.add({
       id, token: company.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20) + "-" + uid().slice(0, 4),
-      company, industry, teamSize, durationDays: duration, dayNumber: 0, hypothesis,
+      company, industry, teamSize, durationDays: duration, dayNumber: 0, hypothesis, problem,
       criteria: criteria.map((c) => ({ ...c, id: uid(), actual: 0 })),
       stakeholders,
       startupCommits: startup.split("\n").filter(Boolean),
@@ -87,6 +88,7 @@ function Wizard() {
             <>
               <div><L>Company name</L><input className={inputCls} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Bluebird Movers" /></div>
               <div><L>Industry</L><input className={inputCls} value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="Moving & Relocation" /></div>
+              <div><L>What's the one problem we're trying to solve during this pilot?</L><textarea className={inputCls} rows={2} value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="Reduce time spent answering repetitive employee questions." /></div>
               <div><L>Team size</L><input type="number" min={1} className={inputCls} value={teamSize} onChange={(e) => setTeamSize(+e.target.value)} /></div>
               <div>
                 <L>Pilot duration</L>
