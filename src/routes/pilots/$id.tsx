@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ExternalLink, Copy, FileText, Zap, Check, Mail, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader, Card, StatusPill, RoleBadge, Bar, btn, inputCls } from "@/components/app/ui";
-import { usePilots, pilotHealth, stallBreakers, criterionProgress, relTime, USER_STEPS, draftNudge, store, type Play, type Pilot } from "@/lib/pilots";
+import { usePilots, pilotHealth, stallBreakers, criterionProgress, relTime, USER_STEPS, draftNudge, store, needsDefinition, type Play, type Pilot } from "@/lib/pilots";
 
 export const Route = createFileRoute("/pilots/$id")({
   head: () => ({
@@ -24,6 +24,7 @@ function PilotPage() {
   const h = pilotHealth(pilot);
   const plays = stallBreakers(pilot);
   const [reviewing, setReviewing] = useState<Play | null>(null);
+  const [problemDraft, setProblemDraft] = useState("");
   const hubUrl = typeof window !== "undefined" ? `${window.location.origin}/hub/${pilot.token}` : `/hub/${pilot.token}`;
 
   return (
@@ -35,7 +36,8 @@ function PilotPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">{pilot.company}</h1>
-              <StatusPill health={h} />
+              {pilot.draft ? <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">Draft</span> : <StatusPill health={h} />}
+              {needsDefinition(pilot) && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">Needs definition</span>}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{pilot.industry} · {pilot.teamSize} people · Day {pilot.dayNumber} of {pilot.durationDays}</p>
           </div>
@@ -48,6 +50,17 @@ function PilotPage() {
           </div>
         </div>
 
+        {needsDefinition(pilot) && (
+          <Card className="mt-6 max-w-2xl space-y-2 border-warning/30 bg-warning-soft p-4">
+            <div className="text-sm font-medium">What's the one problem we're trying to solve during this pilot?</div>
+            <textarea className={inputCls} rows={2} value={problemDraft} onChange={(e) => setProblemDraft(e.target.value)} placeholder="Reduce time spent answering repetitive employee questions." />
+            <div className="flex justify-end">
+              <button className={btn()} disabled={!problemDraft.trim()} onClick={() => { store.update(pilot.id, (p) => ({ ...p, problem: problemDraft.trim(), draft: undefined })); toast.success(pilot.draft ? "Pilot launched" : "Problem saved"); }}>
+                {pilot.draft ? "Save & launch pilot" : "Save problem"}
+              </button>
+            </div>
+          </Card>
+        )}
         {pilot.problem && <p className="mt-6 max-w-2xl text-sm"><span className="text-muted-foreground">Problem we're solving — </span>{pilot.problem}</p>}
         <p className="mt-2 max-w-2xl text-sm"><span className="text-muted-foreground">Hypothesis — </span>{pilot.hypothesis}</p>
 

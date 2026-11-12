@@ -41,14 +41,14 @@ function Wizard() {
   const [nextStep, setNextStep] = useState("Convert to $249/mo Founding Partner plan");
 
   const valid = [
-    company.trim() && industry.trim() && problem.trim(),
+    company.trim() && industry.trim(),
     champ.name.trim() && champ.email.includes("@") && team.some((t) => t.name.trim()),
     hypothesis.trim() && criteria.length >= 1 && criteria.every((c) => c.label.trim()),
     true,
-    nextStep.trim(),
+    nextStep.trim() && problem.trim(),
   ][step];
 
-  const launch = () => {
+  const launch = (draft = false) => {
     const id = "p-" + uid();
     const stakeholders: Stakeholder[] = [
       { id: uid(), ...champ, role: "champion", lastActiveHoursAgo: null, stepsDone: 0 },
@@ -56,7 +56,7 @@ function Wizard() {
     ];
     store.add({
       id, token: company.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20) + "-" + uid().slice(0, 4),
-      company, industry, teamSize, durationDays: duration, dayNumber: 0, hypothesis, problem,
+      company, industry, teamSize, durationDays: duration, dayNumber: 0, hypothesis, problem: problem.trim() || undefined, draft: draft || undefined,
       criteria: criteria.map((c) => ({ ...c, id: uid(), actual: 0 })),
       stakeholders,
       startupCommits: startup.split("\n").filter(Boolean),
@@ -88,7 +88,7 @@ function Wizard() {
             <>
               <div><L>Company name</L><input className={inputCls} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Bluebird Movers" /></div>
               <div><L>Industry</L><input className={inputCls} value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="Moving & Relocation" /></div>
-              <div><L>What's the one problem we're trying to solve during this pilot?</L><textarea className={inputCls} rows={2} value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="Reduce time spent answering repetitive employee questions." /></div>
+              <div><L>What's the one problem we're trying to solve during this pilot? (optional for now)</L><textarea className={inputCls} rows={2} value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="Reduce time spent answering repetitive employee questions." /></div>
               <div><L>Team size</L><input type="number" min={1} className={inputCls} value={teamSize} onChange={(e) => setTeamSize(+e.target.value)} /></div>
               <div>
                 <L>Pilot duration</L>
@@ -162,6 +162,13 @@ function Wizard() {
             <div><L>When criteria are met…</L><input className={inputCls} value={nextStep} onChange={(e) => setNextStep(e.target.value)} />
               <p className="mt-2 text-xs text-muted-foreground">e.g. a Founding Partner plan, or a signed public case study.</p></div>
           )}
+          {step === 4 && !problem.trim() && (
+            <div className="rounded-md border border-warning/30 bg-warning-soft p-3">
+              <L>Needs definition — what's the one problem we're trying to solve?</L>
+              <textarea className={inputCls} rows={2} value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="Reduce time spent answering repetitive employee questions." />
+              <p className="mt-2 text-xs text-muted-foreground">Required to launch. You can save as a draft and define it later.</p>
+            </div>
+          )}
         </Card>
 
         <div className="mt-6 flex justify-between">
@@ -169,7 +176,10 @@ function Wizard() {
           {step < 4 ? (
             <button className={btn()} disabled={!valid} onClick={() => setStep(step + 1)}>Continue</button>
           ) : (
-            <button className={btn()} disabled={!valid} onClick={launch}>Launch pilot</button>
+            <div className="flex gap-2">
+              {!problem.trim() && <button className={btn("secondary")} disabled={!nextStep.trim()} onClick={() => launch(true)}>Save as draft</button>}
+              <button className={btn()} disabled={!valid} onClick={() => launch()}>Launch pilot</button>
+            </div>
           )}
         </div>
       </main>

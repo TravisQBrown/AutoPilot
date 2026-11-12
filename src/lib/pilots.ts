@@ -55,6 +55,7 @@ export interface Pilot {
   nextStep: string;
   feedback: Feedback[];
   completed?: boolean;
+  draft?: boolean; // saved but not launched; launch requires a problem
 }
 
 export const USER_STEPS = [
@@ -309,4 +310,12 @@ export function draftNudge(p: Pilot, play: Play) {
     subject: `3 quick steps to get started with ${p.company}'s pilot`,
     body: `Hi ${names || "team"},\n\nWe're helping ${p.company} ${problem.charAt(0).toLowerCase() + problem.slice(1)}\n\nGetting started takes about 10 minutes:\n${USER_STEPS.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\nIf anything is confusing, just reply here and we'll help right away.\n\nThanks,\nThe AutoPilot team`,
   };
+}
+
+/** A pilot needs its problem defined before it can launch. */
+export function needsDefinition(p: Pilot) {
+  return !p.problem?.trim();
+}
+export function canLaunch(p: Pilot) {
+  return !needsDefinition(p);
 }

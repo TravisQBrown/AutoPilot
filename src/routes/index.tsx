@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Zap } from "lucide-react";
 import { AppHeader, Card, StatusPill, Bar, btn } from "@/components/app/ui";
-import { usePilots, pilotHealth, criteriaMet, relTime, stallBreakers, type Health } from "@/lib/pilots";
+import { usePilots, pilotHealth, criteriaMet, relTime, stallBreakers, needsDefinition, type Health } from "@/lib/pilots";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,8 +18,8 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const pilots = usePilots();
   const counts: Record<Health, number> = { healthy: 0, attention: 0, stalled: 0, completed: 0 };
-  pilots.forEach((p) => counts[pilotHealth(p)]++);
-  const active = pilots.filter((p) => !p.completed);
+  pilots.filter((p) => !p.draft).forEach((p) => counts[pilotHealth(p)]++);
+  const active = pilots.filter((p) => !p.completed && !p.draft);
   const plays = active.flatMap((p) => stallBreakers(p).map((pl) => ({ ...pl, pilot: p })));
 
   const feed = active
@@ -79,7 +79,10 @@ function Dashboard() {
                 return (
                   <Link key={p.id} to="/pilots/$id" params={{ id: p.id }} className="group grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3.5 hover:bg-muted md:grid-cols-[1.4fr_1fr_120px_auto]">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{p.company}</div>
+                      <div className="flex items-center gap-2 truncate text-sm font-medium">{p.company}
+                        {p.draft && <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Draft</span>}
+                        {needsDefinition(p) && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">Needs definition</span>}
+                      </div>
                       <div className="truncate text-xs text-muted-foreground">{p.industry} · {p.teamSize} people</div>
                     </div>
                     <div className="hidden md:block">
@@ -89,7 +92,7 @@ function Dashboard() {
                       </div>
                       <Bar value={p.dayNumber / p.durationDays} tone={h === "stalled" ? "danger" : h === "attention" ? "warning" : "primary"} />
                     </div>
-                    <div className="hidden md:block"><StatusPill health={h} /></div>
+                    <div className="hidden md:block">{p.draft ? <span className="text-xs text-muted-foreground">Not launched</span> : <StatusPill health={h} />}</div>
                     <ArrowRight className="size-4 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
                   </Link>
                 );
