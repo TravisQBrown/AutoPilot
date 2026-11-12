@@ -76,6 +76,13 @@ function Dashboard() {
           <section>
             <h2 className="mb-3 text-sm font-semibold">Pipeline</h2>
             <Card className="divide-y divide-border">
+              {pilots.length === 0 && (
+                <div className="flex flex-col items-start gap-3 p-6">
+                  <div className="text-sm font-medium">No pilots yet</div>
+                  <p className="text-sm text-muted-foreground">Add your first real pilot to start tracking it here.</p>
+                  <Link to="/pilots/new" className={btn()}>New pilot</Link>
+                </div>
+              )}
               {pilots.map((p) => {
                 const h = pilotHealth(p);
                 return (

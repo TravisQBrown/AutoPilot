@@ -75,7 +75,7 @@ export const DEFAULT_PARTNER_COMMITS = [
   "Attend final decision meeting",
 ];
 
-const SAMPLE: Pilot[] = [
+export const SAMPLE: Pilot[] = [
   {
     id: "p-bluebird",
     token: "bluebird-7k2m",
@@ -245,9 +245,10 @@ export function relTime(h: number | null) {
 }
 
 // ---------- store ----------
-const KEY = "autopilot.pilots.v1";
-let state: Pilot[] = SAMPLE;
+const KEY = "autopilot.pilots.v2"; // v2: starts empty, no sample pilots
+let state: Pilot[] = [];
 let loaded = false;
+const EMPTY: Pilot[] = [];
 const subs = new Set<() => void>();
 function load() {
   if (loaded || typeof window === "undefined") return;
@@ -280,12 +281,12 @@ export const store = {
     emit();
   },
   reset() {
-    state = SAMPLE;
+    state = [];
     emit();
   },
 };
 export function usePilots() {
-  return useSyncExternalStore(store.subscribe, store.get, () => SAMPLE);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }
 export function uid() {
   return Math.random().toString(36).slice(2, 9);
