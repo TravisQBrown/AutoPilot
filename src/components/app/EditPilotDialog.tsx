@@ -1,20 +1,23 @@
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { btn, inputCls } from "@/components/app/ui";
-import { store, type Pilot } from "@/lib/pilots";
+import { store, uid, type Pilot, type Stakeholder } from "@/lib/pilots";
 
 const lines = (s: string) => s.split("\n").map((l) => l.trim()).filter(Boolean);
 
 export function EditPilotDialog({ pilot }: { pilot: Pilot }) {
   const [open, setOpen] = useState(false);
   const [f, setF] = useState(() => init(pilot));
+  const [team, setTeam] = useState<Stakeholder[]>(() => pilot.stakeholders.filter((s) => s.role === "user"));
+  const setMember = (id: string, k: "name" | "email" | "title", v: string) => setTeam((t) => t.map((m) => (m.id === id ? { ...m, [k]: v } : m)));
   const set = (k: keyof ReturnType<typeof init>) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }));
 
   function save() {
     if (!f.company.trim()) { toast.error("Business name is required"); return; };
     if (!pilot.draft && !f.problem.trim()) { toast.error("A launched pilot needs a problem defined"); return; };
+    const cleanTeam = team.filter((m) => m.name.trim()).map((m) => ({ ...m, name: m.name.trim(), email: m.email.trim(), title: m.title.trim() }));
     store.update(pilot.id, (p) => ({
       ...p,
       company: f.company.trim(),
@@ -27,7 +30,10 @@ export function EditPilotDialog({ pilot }: { pilot: Pilot }) {
       startupCommits: lines(f.startupCommits),
       partnerCommits: lines(f.partnerCommits),
       criteria: p.criteria.map((c, i) => i === 0 ? { ...c, label: f.winLabel.trim() || c.label, target: Number(f.winTarget) || c.target, unit: f.winUnit } : c),
-      stakeholders: p.stakeholders.map((s) => s.role === "champion" && s.id === f.champId ? { ...s, name: f.champName.trim() || s.name, email: f.champEmail.trim(), title: f.champTitle.trim() } : s),
+      stakeholders: [
+        ...p.stakeholders.filter((s) => s.role === "champion").map((s) => s.id === f.champId ? { ...s, name: f.champName.trim() || s.name, email: f.champEmail.trim(), title: f.champTitle.trim() } : s),
+        ...cleanTeam,
+      ],
     }));
     toast.success("Pilot details updated");
     setOpen(false);
@@ -36,7 +42,7 @@ export function EditPilotDialog({ pilot }: { pilot: Pilot }) {
   const field = (label: string, el: React.ReactNode) => (<label className="block space-y-1"><span className="text-xs text-muted-foreground">{label}</span>{el}</label>);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setF(init(pilot)); }}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setF(init(pilot)); setTeam(pilot.stakeholders.filter((s) => s.role === "user")); } }}>
       <DialogTrigger asChild><button className={btn("secondary")}><Pencil className="size-3.5" /> Edit details</button></DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
         <DialogHeader><DialogTitle>Edit pilot details</DialogTitle></DialogHeader>
@@ -60,6 +66,19 @@ export function EditPilotDialog({ pilot }: { pilot: Pilot }) {
             </div>
             {field("Title", <input className={inputCls} value={f.champTitle} onChange={set("champTitle")} />)}
           </section>}
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold">Team members</h3>
+            {team.length === 0 && <p className="text-xs text-muted-foreground">No team members yet.</p>}
+            {team.map((m) => (
+              <div key={m.id} className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-2">
+                <input className={inputCls} placeholder="Name" aria-label="Team member name" value={m.name} onChange={(e) => setMember(m.id, "name", e.target.value)} />
+                <input className={inputCls} placeholder="Email" aria-label="Team member email" value={m.email} onChange={(e) => setMember(m.id, "email", e.target.value)} />
+                <input className={inputCls} placeholder="Role" aria-label="Team member role" value={m.title} onChange={(e) => setMember(m.id, "title", e.target.value)} />
+                <button type="button" className={btn("ghost")} aria-label={`Remove ${m.name || "member"}`} onClick={() => setTeam((t) => t.filter((x) => x.id !== m.id))}><Trash2 className="size-4" /></button>
+              </div>
+            ))}
+            <button type="button" className={btn("secondary")} onClick={() => setTeam((t) => [...t, { id: uid(), name: "", email: "", title: "", role: "user", lastActiveHoursAgo: null, stepsDone: 0 }])}><Plus className="size-3.5" /> Add team member</button>
+          </section>
           {pilot.criteria[0] && <section className="space-y-3">
             <h3 className="text-sm font-semibold">The win</h3>
             {field("What we measure", <input className={inputCls} value={f.winLabel} onChange={set("winLabel")} />)}
